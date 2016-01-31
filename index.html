@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Chat</title>
+	</head>
+	<body>
+		<form class='sign-in' action="chat" method="post">
+			
+			Username <input type='text' name='username' class='username' placeholder='Enter your name' required><br>
+
+			Gender <input type='radio' name='gender' class='male' value='male' checked>Male
+			<input type='radio' name='gender' class='female' value='female'>Female<br>
+			
+			Age <select name='age' class='age'></select><br>
+			Country <select name='country' class='country'></select><br>
+			
+			<input type='button' class='clear-inputs-button' value='Clear'>
+			<input type='submit' class='start-chat-button' value='Start chat!'>
+		</form>
+
+		<script type='text/javascript'>
+
+			(function() {
+				var getNode = function(s) {
+					return document.querySelector(s);
+				};
+
+				var loadCountries = function(callback) {						
+					
+					var xhr = new XMLHttpRequest();
+					xhr.open('GET', 'countries.txt', true);
+
+					xhr.onreadystatechange = function() {
+					    if (this.readyState !== 4) return;
+					    if (this.status !== 200) return;
+					    country.innerHTML = this.responseText;
+
+					    callback();
+					};
+					xhr.send();
+				};
+
+				var loadAges = function() {
+					for(var i = 18; i < 70; i++) {
+					    var option = document.createElement("option");
+					    option.textContent = i;
+					    option.value = i;
+					    age.appendChild(option);
+					}
+				};
+
+				var loadLocalStorage = function() {
+					if(localStorage.getItem('username') !== null
+						&& localStorage.getItem('gender') !== null
+						&& localStorage.getItem('age') !== null
+						&& localStorage.getItem('country') !== null) {
+
+						username.value = localStorage.getItem('username');
+						getNode('.' + localStorage.getItem('gender')).checked = true;
+						age.value = localStorage.getItem('age');
+						country.value = localStorage.getItem('country');
+					}
+				};
+
+				var signIn = getNode('.sign-in');
+				var username = getNode('.username');
+				var male = getNode('.male');
+				var female = getNode('.female');
+				var age = getNode('.age');
+				var country = getNode('.country');
+				var startChatButton = getNode('.start-chat-button');
+				
+				loadAges();
+				loadCountries(loadLocalStorage);
+
+				document.addEventListener('keydown', function(event) {
+					
+					if(event.which === 13) {
+						startChatButton.onclick();
+					}
+				});
+
+				startChatButton.onclick = function() {
+
+					event.preventDefault();
+					localStorage.setItem('username', username.value);
+					localStorage.setItem('gender', male.checked ? male.value : female.value);
+					localStorage.setItem('age', age.value);
+					localStorage.setItem('country', country.value);
+
+					signIn.submit();
+				};
+			})();
+		</script>
+	</body>
+</html>

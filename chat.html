@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Chat</title>
+		<link rel='stylesheet' type='text/css' href='css/chat.css'>
+	</head>
+	<body>
+		<div class='onlineUsersDiv'>
+
+		</div>
+
+		<div class='chat'>
+			<input type='text' class='conversation-id' placeholder='Conversation members' disabled>
+			<div class='chat-messages'></div>
+			<textarea class='chat-textarea' placeholder='Type your message'></textarea>
+			<div class='chat-status'>Status: <span>Idle</span></div>
+		</div>
+
+		<div class='bottom'>
+			Hello <input type='text' class='user-name'>!<br>
+			Not you? <input type='button' class='log-out' value='Log out!'>
+		</div>
+
+		<script type='text/javascript' src='http://localhost:8080/socket.io/socket.io.js'></script>
+
+		<script type='text/javascript'>
+
+			(function() {
+				
+				try {
+					var socket = io.connect('http://localhost:8080');
+				}
+				catch(e) {
+
+				}
+
+				socket.emit('ping', {
+					username: localStorage.getItem('username'),
+					gender: localStorage.getItem('gender'),
+					age: localStorage.getItem('age'),
+					country: localStorage.getItem('country'),
+
+				});
+
+				var getNode = function(s) {
+					return document.querySelector(s);
+				};
+
+				var onlineUsersDiv = getNode('.onlineUsersDiv');
+				var status = getNode('.chat-status span');
+				var messages = getNode('.chat-messages');
+				var textarea = getNode('.chat-textarea');
+				var username = getNode('.user-name');
+				var conversationId = getNode('.conversation-id');
+				var logOut = getNode('.log-out');
+
+				var statusDefault = status.textContent;
+
+				var convertToNumber = function(word) {
+					var sum = 0;
+					for(var i = 0; i < word.length; i++) {
+						sum += word.charCodeAt(i);
+					}
+					return sum;
+				};
+
+				var setStatus = function(s) {
+					status.textContent = s;
+
+					if(s !== statusDefault){
+						var delay = setTimeout(function() {
+							setStatus(statusDefault);
+							clearInterval(delay);
+						}, 3000);
+					}
+				};
+
+				var playSound = function(filename) {
+					var audio = new Audio(filename + '.mp3');
+					audio.play();
+	            };
+
+				if(localStorage.getItem('username') !== null) {
+					username.value = localStorage.getItem('username');
+				}
+
+				logOut.onclick = function () {
+
+					window.location.href = 'index.html';
+            	};
+
+				if(socket !== undefined){
+
+					socket.on('output', function(data) {
+						if(data.length) {
+
+							for(var x = 0; x < data.length; x++) {
+								var message = document.createElement('div');
+								message.setAttribute('class', 'chat-message');
+								var to = data[x].id.replace(data[x].name, '');
+								to = to.replace(' and ', '');
+								message.textContent = data[x].name + ' to ' + to + ': ' + data[x].message;
+
+								messages.appendChild(message);
+								messages.insertBefore(message, messages.firstChild);
+							}
+
+							playSound('incomingMessage');
+						}
+					});
+
+					socket.on('whoIsOnline', function(data) {
+						if(data.length) {
+
+							for(var x = 0; x < data.length; x++) {
+
+								if(username.value !== data[x].username) {
+
+									var onlineUser = document.createElement('div');
+									onlineUser.setAttribute('class', 'onlineUser');
+									onlineUser.textContent = data[x].username;
+
+									onlineUsersDiv.appendChild(onlineUser);
+									onlineUsersDiv.insertBefore(onlineUser, onlineUsersDiv.firstChild);
+
+									onlineUser.addEventListener('click', function() {
+
+										if(convertToNumber(username.value) <= convertToNumber(this.textContent))
+											conversationId.value = username.value + ' and ' + this.textContent;
+										else
+											conversationId.value = this.textContent + ' and ' + username.value;
+
+										messages.innerHTML = '';
+										socket.emit('showConversation', {
+											id: conversationId.value
+										});
+									});
+								}
+							}
+						}
+					});
+
+					socket.on('status', function(data) {
+						setStatus((typeof data === 'object') ? data.message : data);
+
+						if(data.clear === true){
+							textarea.value = '';
+						}
+					});
+					
+					textarea.addEventListener('keydown', function(event) {
+						var usernameValue = username.value;
+						var conversationIdValue = conversationId.value;
+
+						if(event.which === 13 && event.shiftKey === false) {
+							event.preventDefault();
+
+							socket.emit('input', {
+								name: usernameValue,
+								message: this.value,
+								id: conversationIdValue
+							});
+						}
+					});
+				}
+			})();
+		</script>
+	</body>
+</html>
